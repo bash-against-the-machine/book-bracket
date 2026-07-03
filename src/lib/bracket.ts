@@ -1,116 +1,214 @@
 export const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
   'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ] as const
 
 export type MonthIndex = number // 0-11
 
+export type Picks = Record<string, 0 | 1>
+
 export interface Slot {
-  /** Data URL of the cover image for this slot, or null if not decided yet. */
+  /** Data URL of the cover image occupying this spot, or null if undecided. */
   image: string | null
-  /** Human label, e.g. "January" for a leaf slot, or a placeholder for a still-pending one. */
+  /** Month abbreviation once a book occupies the spot, e.g. "Jan". */
   label: string
-  /** True if this slot is still waiting on an earlier match to be decided. */
+  /** True if this spot is still waiting on an earlier match to be decided. */
   pending: boolean
 }
 
-export interface Match {
-  id: string
-  round: number
-  a: Slot
-  b: Slot
-  /** Which side won: 0 for a, 1 for b. Undefined if undecided. */
-  pick?: 0 | 1
+export interface TapAction {
+  matchId: string
+  side: 0 | 1
 }
 
-export interface BracketResult {
-  /** Rounds of matches, in ascending order. Round 1 is the 6 month-pair
-   * matchups. Rounds 2-4 resolve each 6-month half down to a half-champion
-   * using a "loser plays the next contender" ladder (see buildHalf below).
-   * Round 5 is the final between the two half-champions. */
-  rounds: Match[][]
-  /** The final slot once every match has been decided, otherwise null. */
-  champion: Slot | null
+export interface BoxState {
+  slot: Slot
+  /** What tapping this box picks, if anything is currently pickable from it. */
+  tap?: TapAction
+  /** True if this box's book won its match here and advanced. */
+  selected: boolean
+  /** True if this box is part of a matchup currently awaiting the user's pick. */
+  active: boolean
+}
+
+export interface HalfView {
+  rd1: [BoxState, BoxState, BoxState]
+  rd2: [BoxState, BoxState]
+  rd3: BoxState
+}
+
+export interface BracketView {
+  months: BoxState[]
+  top: HalfView
+  bottom: HalfView
+  champion: BoxState
 }
 
 /**
- * Builds the full 12-month bracket.
- *
- * The 12 months split into two 6-month halves (Jan-Jun, Jul-Dec). Within a
- * half, the 3 pair-winners are reduced to one half-champion with a ladder:
- * winner1 vs winner2 (round 2); the loser of that plays winner3 (round 3);
- * then the round-2 winner plays the round-3 winner to decide the half
- * champion (round 4). The two half-champions meet in the final (round 5).
+ * Match ids:
+ *   pair-0..pair-5  month head-to-heads (Jan/Feb ... Nov/Dec)
+ *   t-m1, b-m1      Rd 1 slot 1 vs slot 2 (winner -> first Rd 2 box)
+ *   t-m2, b-m2      loser of m1 vs Rd 1 slot 3 (winner -> second Rd 2 box)
+ *   t-m3, b-m3      the two Rd 2 boxes (winner -> Rd 3); skipped when they
+ *                   already met in m1, in which case the m1 winner advances
+ *   final           top Rd 3 vs bottom Rd 3 (winner -> W)
  */
+export function downstreamOf(matchId: string): string[] {
+  if (matchId.startsWith('pair-')) {
+    const half = Number(matchId.slice(5)) < 3 ? 't' : 'b'
+    return [`${half}-m1`, `${half}-m2`, `${half}-m3`, 'final']
+  }
+  const [half, stage] = matchId.split('-')
+  if (stage === 'm1') return [`${half}-m2`, `${half}-m3`, 'final']
+  if (stage === 'm2') return [`${half}-m3`, 'final']
+  if (stage === 'm3') return ['final']
+  return []
+}
+
+function emptySlot(label: string): Slot {
+  return { image: null, label, pending: true }
+}
+
+function filled(s: Slot): boolean {
+  return !!s.image && !s.pending
+}
+
 export function buildBracket(
   images: Partial<Record<MonthIndex, string>>,
-  picks: Record<string, 0 | 1>,
-): BracketResult {
-  const leaves: Slot[] = MONTHS.map((name, i) => ({
+  picks: Picks,
+): BracketView {
+  const monthSlots: Slot[] = MONTHS.map((name, i) => ({
     image: images[i] ?? null,
     label: name,
     pending: false,
   }))
 
-  function play(id: string, round: number, a: Slot, b: Slot) {
-    const canDecide = !!a.image && !a.pending && !!b.image && !b.pending
-    const pick = canDecide ? picks[id] : undefined
-    const match: Match = { id, round, a, b, pick }
+  const months: BoxState[] = monthSlots.map((slot, i) => {
+    const pair = Math.floor(i / 2)
+    const side = (i % 2) as 0 | 1
+    const partner = monthSlots[side === 0 ? i + 1 : i - 1]
+    const decidable = !!slot.image && !!partner.image
+    const pick = decidable ? picks[`pair-${pair}`] : undefined
+    return {
+      slot,
+      tap: decidable ? { matchId: `pair-${pair}`, side } : undefined,
+      selected: decidable && pick === side,
+      active: decidable && pick === undefined,
+    }
+  })
 
-    if (pick === undefined) {
-      const pendingSlot: Slot = { image: null, label: `${a.label} / ${b.label}`, pending: true }
-      return { match, winner: pendingSlot, loser: pendingSlot }
+  function pairWinner(pair: number): Slot {
+    const a = monthSlots[pair * 2]
+    const b = monthSlots[pair * 2 + 1]
+    const pick = a.image && b.image ? picks[`pair-${pair}`] : undefined
+    return pick === undefined ? emptySlot('Rd 1') : pick === 0 ? a : b
+  }
+
+  function buildHalf(prefix: 't' | 'b', firstPair: number) {
+    const s = [pairWinner(firstPair), pairWinner(firstPair + 1), pairWinner(firstPair + 2)]
+    const m1Id = `${prefix}-m1`
+    const m2Id = `${prefix}-m2`
+    const m3Id = `${prefix}-m3`
+
+    const m1Decidable = filled(s[0]) && filled(s[1])
+    const m1Pick = m1Decidable ? picks[m1Id] : undefined
+    const m1Winner = m1Pick === undefined ? emptySlot('Rd 2') : s[m1Pick]
+    const m1LoserIndex = m1Pick === undefined ? -1 : 1 - m1Pick
+    const m1Loser = m1LoserIndex === -1 ? emptySlot('Rd 2') : s[m1LoserIndex]
+
+    const m2Decidable = m1Pick !== undefined && filled(s[2])
+    const m2Pick = m2Decidable ? picks[m2Id] : undefined
+    const m2Winner = m2Pick === undefined ? emptySlot('Rd 2') : m2Pick === 0 ? m1Loser : s[2]
+
+    // The Rd 2 pairing is m1's winner vs m2's winner. When m2 was won by
+    // m1's loser, those two already met in m1 — the m1 winner advances to
+    // Rd 3 automatically instead of asking the user for the same pick twice.
+    const m3Auto = m2Pick === 0
+    const m3Ready = m1Pick !== undefined && m2Pick !== undefined
+    const m3Pick = !m3Ready ? undefined : m3Auto ? 0 : picks[m3Id]
+    const halfWinner =
+      m3Pick === undefined ? emptySlot('Rd 3') : m3Pick === 0 ? m1Winner : m2Winner
+
+    function rd1Box(j: 0 | 1 | 2): BoxState {
+      const slot = s[j]
+      if (!filled(slot)) return { slot, selected: false, active: false }
+
+      // Matches this book takes part in, in play order.
+      const played: { id: string; side: 0 | 1; decidable: boolean; pick?: 0 | 1 }[] = []
+      if (j < 2) played.push({ id: m1Id, side: j as 0 | 1, decidable: m1Decidable, pick: m1Pick })
+      if (j === m1LoserIndex)
+        played.push({ id: m2Id, side: 0, decidable: m2Decidable, pick: m2Pick })
+      if (j === 2) played.push({ id: m2Id, side: 1, decidable: m2Decidable, pick: m2Pick })
+
+      const undecided = played.find((m) => m.decidable && m.pick === undefined)
+      // With nothing left to decide, tapping re-picks the latest decided
+      // match this book lost, cascading any downstream picks away.
+      const repick = [...played].reverse().find((m) => m.decidable && m.pick !== m.side)
+      const target = undecided ?? repick
+
+      return {
+        slot,
+        tap: target ? { matchId: target.id, side: target.side } : undefined,
+        selected: played.some((m) => m.pick === m.side),
+        active: undecided !== undefined,
+      }
     }
 
-    const winner = pick === 0 ? a : b
-    const loser = pick === 0 ? b : a
-    return { match, winner, loser }
+    function rd2Box(k: 0 | 1): BoxState {
+      const slot = k === 0 ? m1Winner : m2Winner
+      if (!filled(slot)) return { slot, selected: false, active: false }
+      if (m3Auto) return { slot, selected: k === 0, active: false }
+      return {
+        slot,
+        tap: m3Ready ? { matchId: m3Id, side: k } : undefined,
+        selected: m3Pick === k,
+        active: m3Ready && m3Pick === undefined,
+      }
+    }
+
+    return {
+      rd1: [rd1Box(0), rd1Box(1), rd1Box(2)] as [BoxState, BoxState, BoxState],
+      rd2: [rd2Box(0), rd2Box(1)] as [BoxState, BoxState],
+      halfWinner,
+    }
   }
 
-  const rounds: Match[][] = [[], [], [], [], []]
+  const topHalf = buildHalf('t', 0)
+  const bottomHalf = buildHalf('b', 3)
 
-  const round1Winners: Slot[] = []
-  for (let i = 0; i < 6; i++) {
-    const { match, winner } = play(`1-${i}`, 1, leaves[i * 2], leaves[i * 2 + 1])
-    rounds[0].push(match)
-    round1Winners.push(winner)
+  const finalDecidable = filled(topHalf.halfWinner) && filled(bottomHalf.halfWinner)
+  const finalPick = finalDecidable ? picks['final'] : undefined
+  const championSlot =
+    finalPick === undefined
+      ? emptySlot('W')
+      : finalPick === 0
+        ? topHalf.halfWinner
+        : bottomHalf.halfWinner
+
+  function rd3Box(halfWinner: Slot, side: 0 | 1): BoxState {
+    if (!filled(halfWinner)) return { slot: halfWinner, selected: false, active: false }
+    return {
+      slot: halfWinner,
+      tap: finalDecidable ? { matchId: 'final', side } : undefined,
+      selected: finalPick === side,
+      active: finalDecidable && finalPick === undefined,
+    }
   }
-
-  function buildHalf(pairOffset: number, halfIndex: number): Slot {
-    const w0 = round1Winners[pairOffset]
-    const w1 = round1Winners[pairOffset + 1]
-    const w2 = round1Winners[pairOffset + 2]
-
-    const { match: m2, winner: r2Winner, loser: r2Loser } = play(`2-${halfIndex}`, 2, w0, w1)
-    rounds[1].push(m2)
-
-    const { match: m3, winner: r3Winner } = play(`3-${halfIndex}`, 3, r2Loser, w2)
-    rounds[2].push(m3)
-
-    const { match: m4, winner: halfChampion } = play(`4-${halfIndex}`, 4, r2Winner, r3Winner)
-    rounds[3].push(m4)
-
-    return halfChampion
-  }
-
-  const champA = buildHalf(0, 0)
-  const champB = buildHalf(3, 1)
-
-  const { match: finalMatch, winner: champion } = play('5-0', 5, champA, champB)
-  rounds[4].push(finalMatch)
 
   return {
-    rounds,
-    champion: champion.image && !champion.pending ? champion : null,
+    months,
+    top: { rd1: topHalf.rd1, rd2: topHalf.rd2, rd3: rd3Box(topHalf.halfWinner, 0) },
+    bottom: { rd1: bottomHalf.rd1, rd2: bottomHalf.rd2, rd3: rd3Box(bottomHalf.halfWinner, 1) },
+    champion: { slot: championSlot, selected: false, active: false },
   }
 }

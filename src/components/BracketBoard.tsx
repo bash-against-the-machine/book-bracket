@@ -1,74 +1,163 @@
-import type { BracketResult } from '../lib/bracket'
+import type { ReactNode } from 'react'
+import { MONTHS, type BoxState, type BracketView, type TapAction } from '../lib/bracket'
 import { BookCover } from './BookCover'
 
 interface BracketBoardProps {
-  bracket: BracketResult
-  onPick: (matchId: string, pick: 0 | 1) => void
+  bracket: BracketView
+  onTap: (tap: TapAction) => void
+  onUpload: (month: number, image: string) => void
+  /** Rendered mid-left of the board; excluded from the saved image. */
+  hint: ReactNode
+  /** Rendered mid-right of the board; excluded from the saved image. */
+  actions: ReactNode
 }
 
-const ROUND_LABELS: Record<number, string> = {
-  1: 'Round 1',
-  2: 'Round 2',
-  3: 'Round 3',
-  4: 'Semifinal',
-  5: 'Final',
+interface BoxProps {
+  box: BoxState
+  placeholder?: string
+  onTap: (tap: TapAction) => void
+  onUpload?: (image: string) => void
 }
 
-export function BracketBoard({ bracket, onPick }: BracketBoardProps) {
-  // Highest round number first: the final is nearest the champion, round 1
-  // (the month pairings) is nearest the month grid at the bottom of the page.
-  const roundsTopDown = [...bracket.rounds].reverse()
-
+function Box({ box, placeholder, onTap, onUpload }: BoxProps) {
+  const { tap } = box
   return (
-    <div className="bracket-board">
-      <div className="round-section">
-        <div className="round-label">Winner</div>
-        <div className="champion">
-          <BookCover
-            image={bracket.champion?.image ?? null}
-            label={bracket.champion?.label ?? 'Best Book of the Year'}
-            disabled
-          />
-        </div>
-      </div>
+    <BookCover
+      image={box.slot.image}
+      label={box.slot.label}
+      placeholder={placeholder}
+      onUpload={onUpload}
+      selected={box.selected}
+      active={box.active}
+      disabled={!tap}
+      onClick={tap ? () => onTap(tap) : undefined}
+    />
+  )
+}
 
-      {roundsTopDown.map((matches) => {
-        const roundNumber = matches[0]?.round
+function MonthsRow({
+  bracket,
+  offset,
+  side,
+  onTap,
+  onUpload,
+}: {
+  bracket: BracketView
+  offset: number
+  side: 'top' | 'bottom'
+  onTap: (tap: TapAction) => void
+  onUpload: (month: number, image: string) => void
+}) {
+  return (
+    <div className="row lanes">
+      {[0, 1, 2].map((p) => {
+        const first = offset + p * 2
         return (
-          <div className="round-section" key={roundNumber}>
-            <div className="connector" aria-hidden="true" />
-            <div className="round-label">{ROUND_LABELS[roundNumber] ?? `Round ${roundNumber}`}</div>
-            <div className="bracket-round">
-              {matches.map((match) => {
-                const canDecide =
-                  !!match.a.image && !match.a.pending && !!match.b.image && !match.b.pending
-
-                return (
-                  <div className="matchup" key={match.id}>
-                    <BookCover
-                      image={match.a.image}
-                      label={match.a.pending ? 'Undecided' : match.a.label}
-                      selected={match.pick === 0}
-                      disabled={!canDecide}
-                      onClick={() => onPick(match.id, 0)}
-                    />
-                    <span className="vs">vs</span>
-                    <BookCover
-                      image={match.b.image}
-                      label={match.b.pending ? 'Undecided' : match.b.label}
-                      selected={match.pick === 1}
-                      disabled={!canDecide}
-                      onClick={() => onPick(match.id, 1)}
-                    />
-                  </div>
-                )
-              })}
-            </div>
+          <div className="lane pair-months" key={p}>
+            {[first, first + 1].map((i) => (
+              <div className="month-cell" key={i}>
+                {side === 'top' && <span className="month-name">{MONTHS[i]}</span>}
+                <Box box={bracket.months[i]} onTap={onTap} onUpload={(img) => onUpload(i, img)} />
+                {side === 'bottom' && <span className="month-name">{MONTHS[i]}</span>}
+              </div>
+            ))}
           </div>
         )
       })}
+    </div>
+  )
+}
 
-      <div className="connector" aria-hidden="true" />
+function PairConnectorRow({ dir }: { dir: 'down' | 'up' }) {
+  return (
+    <div className="row lanes connector-row" aria-hidden="true">
+      {[0, 1, 2].map((p) => (
+        <div className="lane" key={p}>
+          {dir === 'down' ? (
+            <>
+              <span className="pair-join down" />
+              <span className="stem down" />
+            </>
+          ) : (
+            <>
+              <span className="stem up" />
+              <span className="pair-join up" />
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function RdRow({
+  boxes,
+  placeholder,
+  dir,
+  lanes,
+  className,
+  onTap,
+}: {
+  boxes: BoxState[]
+  placeholder: string
+  /** Adds a connector stem on the side the box is fed from. */
+  dir?: 'down' | 'up'
+  lanes?: boolean
+  className?: string
+  onTap: (tap: TapAction) => void
+}) {
+  return (
+    <div className={`row${lanes ? ' lanes' : ''}${className ? ` ${className}` : ''}`}>
+      {boxes.map((box, i) => {
+        const col = (
+          <div className="box-col">
+            {dir === 'down' && <span className="stem down" aria-hidden="true" />}
+            <Box box={box} placeholder={placeholder} onTap={onTap} />
+            {dir === 'up' && <span className="stem up" aria-hidden="true" />}
+          </div>
+        )
+        return lanes ? (
+          <div className="lane" key={i}>
+            {col}
+          </div>
+        ) : (
+          <div className="box-col-wrap" key={i}>
+            {col}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export function BracketBoard({ bracket, onTap, onUpload, hint, actions }: BracketBoardProps) {
+  return (
+    <div className="board">
+      <div className="half half-top">
+        <MonthsRow bracket={bracket} offset={0} side="top" onTap={onTap} onUpload={onUpload} />
+        <PairConnectorRow dir="down" />
+        <RdRow boxes={bracket.top.rd1} placeholder="Rd 1" lanes className="rd1" onTap={onTap} />
+        <RdRow boxes={bracket.top.rd2} placeholder="Rd 2" dir="down" className="rd2" onTap={onTap} />
+        <RdRow boxes={[bracket.top.rd3]} placeholder="Rd 3" dir="down" className="rd3" onTap={onTap} />
+      </div>
+
+      <div className="mid-row">
+        <div className="mid-side no-export">{hint}</div>
+        <div className="w-col">
+          <span className="stem down" aria-hidden="true" />
+          <Box box={bracket.champion} placeholder="W" onTap={onTap} />
+          <span className="stem up" aria-hidden="true" />
+        </div>
+        <div className="mid-side no-export">{actions}</div>
+      </div>
+
+      <div className="half half-bottom">
+        <RdRow boxes={[bracket.bottom.rd3]} placeholder="Rd 3" dir="up" className="rd3" onTap={onTap} />
+        <RdRow boxes={bracket.bottom.rd2} placeholder="Rd 2" dir="up" className="rd2" onTap={onTap} />
+        <RdRow boxes={bracket.bottom.rd1} placeholder="Rd 1" lanes className="rd1" onTap={onTap} />
+        <PairConnectorRow dir="up" />
+        <MonthsRow bracket={bracket} offset={6} side="bottom" onTap={onTap} onUpload={onUpload} />
+      </div>
     </div>
   )
 }

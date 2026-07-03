@@ -1,16 +1,13 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toJpeg } from 'html-to-image'
-import { buildBracket } from './lib/bracket'
+import { buildBracket, type TapAction } from './lib/bracket'
 import { useBookBracket } from './hooks/useBookBracket'
-import { TopBar } from './components/TopBar'
 import { BracketBoard } from './components/BracketBoard'
-import { MonthGrid } from './components/MonthGrid'
+import { readFileAsDataUrl } from './lib/files'
 import './App.css'
 
 function App() {
   const {
-    username,
-    setUsername,
     backgroundImage,
     setBackgroundImage,
     year,
@@ -22,28 +19,26 @@ function App() {
     setMatchPick,
   } = useBookBracket()
 
-  const [sharing, setSharing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const captureRef = useRef<HTMLDivElement>(null)
-  const topBarRef = useRef<HTMLDivElement>(null)
-  const stageRef = useRef<HTMLDivElement>(null)
+  const bgInputRef = useRef<HTMLInputElement>(null)
   const [scale, setScale] = useState(1)
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
 
   const bracket = useMemo(() => buildBracket(images, picks), [images, picks])
 
   // Shrink the whole bracket (via CSS transform, not layout reflow) so it
-  // always fits within the viewport without scrolling, no matter how tall
-  // the current bracket state or window size is. The captured content
-  // itself stays full-size and unscaled, so downloaded images stay sharp.
+  // always fits within the viewport without scrolling. The captured content
+  // itself stays full-size and unscaled, so saved images stay sharp.
   useLayoutEffect(() => {
     const content = captureRef.current
     if (!content) return
 
     function recalc() {
       if (!content) return
-      const topBarHeight = topBarRef.current?.offsetHeight ?? 0
-      const availableHeight = window.innerHeight - topBarHeight - 16
-      const availableWidth = window.innerWidth - 16
+      const availableHeight = window.innerHeight - 12
+      const availableWidth = window.innerWidth - 12
       const naturalWidth = content.offsetWidth
       const naturalHeight = content.offsetHeight
       if (naturalWidth === 0 || naturalHeight === 0) return
@@ -69,30 +64,35 @@ function App() {
     }
   }, [bracket, images])
 
-  useEffect(() => {
-    function handleResize() {
-      window.dispatchEvent(new Event('resize'))
-    }
-    window.addEventListener('orientationchange', handleResize)
-    return () => window.removeEventListener('orientationchange', handleResize)
-  }, [])
-
-  async function handleShare() {
-    if (!captureRef.current) return
-    setSharing(true)
+  async function handleSave() {
+    const node = captureRef.current
+    if (!node) return
+    setSaving(true)
+    setExporting(true)
     try {
-      const dataUrl = await toJpeg(captureRef.current, {
+      // Let the "exporting" class paint so pick highlights are suppressed.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      const dataUrl = await toJpeg(node, {
         pixelRatio: 2,
         quality: 0.95,
-        backgroundColor: backgroundImage ? undefined : '#ffffff',
+        backgroundColor: '#ffffff',
+        filter: (n) => !(n instanceof HTMLElement && n.classList.contains('no-export')),
       })
       const link = document.createElement('a')
       link.download = `book-bracket-${year}.jpg`
       link.href = dataUrl
       link.click()
     } finally {
-      setSharing(false)
+      setExporting(false)
+      setSaving(false)
     }
+  }
+
+  async function handleBackgroundFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBackgroundImage(await readFileAsDataUrl(file))
   }
 
   const backgroundStyle = backgroundImage
@@ -105,20 +105,7 @@ function App() {
 
   return (
     <div id="app" style={backgroundStyle}>
-      <div ref={topBarRef}>
-        <TopBar
-          username={username}
-          onUsernameChange={setUsername}
-          year={year}
-          years={years}
-          onYearChange={setYear}
-          onBackgroundChange={setBackgroundImage}
-          onShare={handleShare}
-          sharing={sharing}
-        />
-      </div>
-
-      <div className="stage" ref={stageRef}>
+      <div className="stage">
         <div
           className="scale-sizer"
           style={{
@@ -127,14 +114,81 @@ function App() {
           }}
         >
           <div className="scale-wrapper" style={{ transform: `scale(${scale})` }}>
-            <div className="capture-area" ref={captureRef} style={backgroundStyle}>
-              <h1 className="bracket-title">
-                {username ? `${username}'s` : 'My'} Book Bracket — {year}
-              </h1>
+            <div
+              className={`capture-area${exporting ? ' exporting' : ''}`}
+              ref={captureRef}
+              style={backgroundStyle}
+            >
+              <div className="heading-row">
+                <h1
+                  className="bracket-heading"
+                  contentEditable
+                  suppressContentEditableWarning
+                  spellCheck={false}
+                  aria-label="Bracket heading"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      e.currentTarget.blur()
+                    }
+                  }}
+                >
+                  My Book Bracket
+                </h1>
+                <span className="year-wrap">
+                  <span className="year-text">{year}</span>
+                  <select
+                    className="year-select no-export"
+                    value={year}
+                    onChange={(e) => setYear(Number(e.target.value))}
+                    aria-label="Year"
+                  >
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </div>
 
-              <BracketBoard bracket={bracket} onPick={setMatchPick} />
-
-              <MonthGrid images={images} onUpload={setMonthImage} />
+              <BracketBoard
+                bracket={bracket}
+                onTap={(tap: TapAction) => setMatchPick(tap.matchId, tap.side)}
+                onUpload={setMonthImage}
+                hint={
+                  <p className="hint">
+                    Tap &ldquo;My Book Bracket&rdquo; and Year to Customize. Tap a book to pick
+                    each matchup&rsquo;s winner.
+                  </p>
+                }
+                actions={
+                  <>
+                    <button
+                      type="button"
+                      className="save-button"
+                      onClick={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? 'Saving…' : 'Save to Device'}
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-button"
+                      onClick={() => bgInputRef.current?.click()}
+                    >
+                      Background
+                    </button>
+                    <input
+                      ref={bgInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBackgroundFile}
+                      hidden
+                    />
+                  </>
+                }
+              />
             </div>
           </div>
         </div>

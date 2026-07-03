@@ -10,7 +10,7 @@
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   overflow: hidden;
   width: 100%;
 }
@@ -25,99 +25,253 @@
   transform-origin: top left;
 }
 
-/* Top bar */
-
-.top-bar {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 16px;
-  background: var(--social-bg, rgba(244, 243, 236, 0.7));
-  backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--border);
-}
-
-.top-bar-field {
+/* Capture area: everything inside ends up in the saved image except
+   elements marked .no-export. */
+.capture-area {
+  --cover-w: 58px;
+  --pair-gap: 10px;
+  --lane-w: 150px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 24px 22px;
 }
 
-.top-bar-field label {
-  font-size: 12px;
-  color: var(--text);
+/* Heading + year */
+
+.heading-row {
+  display: flex;
+  align-items: baseline;
+  gap: 36px;
 }
 
-.top-bar-field input[type='text'],
-.top-bar-field select {
-  font: inherit;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
+.bracket-heading {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.3px;
+  outline: none;
+  border-bottom: 1px dashed transparent;
+  cursor: text;
+}
+
+.bracket-heading:hover,
+.bracket-heading:focus {
+  border-bottom-color: var(--accent-border);
+}
+
+.year-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.year-text {
+  font-size: 20px;
   color: var(--text-h);
+  border-bottom: 1px dashed transparent;
 }
 
-.top-bar button {
-  font: inherit;
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+.year-wrap:hover .year-text {
+  border-bottom-color: var(--accent-border);
+}
+
+.year-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
   cursor: pointer;
 }
 
-.top-bar button:hover {
-  border-color: var(--accent-border);
+/* Board structure */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.share-button {
-  margin-left: auto;
-  background: var(--accent) !important;
-  color: #fff !important;
-  border-color: var(--accent) !important;
+.half {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.lanes {
+  gap: 14px;
+}
+
+.lane {
+  width: var(--lane-w);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pair-months {
+  gap: var(--pair-gap);
+}
+
+.connector-row .lane {
+  flex-direction: column;
+}
+
+.month-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.month-name {
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+/* Rd 2 boxes sit between the Rd 1 lanes */
+.rd2 {
+  gap: 104px;
+}
+
+.box-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Connectors */
+
+.stem {
+  width: 2px;
+  height: 12px;
+  background: var(--border);
+  position: relative;
+}
+
+.stem.down::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--border);
+}
+
+.stem.up::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 6px solid var(--border);
+}
+
+.pair-join {
+  width: calc(var(--cover-w) + var(--pair-gap));
+  height: 10px;
+}
+
+.pair-join.down {
+  border-left: 2px solid var(--border);
+  border-right: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  border-radius: 0 0 5px 5px;
+}
+
+.pair-join.up {
+  border-left: 2px solid var(--border);
+  border-right: 2px solid var(--border);
+  border-top: 2px solid var(--border);
+  border-radius: 5px 5px 0 0;
+}
+
+/* Middle row: hint | W | actions */
+
+.mid-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 2px 0;
+}
+
+.mid-side {
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+  text-align: center;
+}
+
+.w-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.w-col .book-cover {
+  --cover-w: 76px;
+}
+
+.save-button {
+  font: inherit;
+  font-size: 13px;
   font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
 }
 
-.share-button:disabled {
+.save-button:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-/* Capture area */
-
-.capture-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 20px 20px 28px;
+.bg-button {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
 }
 
-.bracket-title {
-  margin: 0;
-  text-align: center;
-  line-height: 1.2;
-  font-size: 28px;
+.bg-button:hover {
+  border-color: var(--accent-border);
 }
 
-@media (max-width: 640px) {
-  .bracket-title {
-    font-size: 20px;
-  }
-}
-
-/* Book cover */
+/* Book cover boxes */
 
 .book-cover {
-  --cover-w: 72px;
   width: var(--cover-w);
   aspect-ratio: 2 / 3;
   border: none;
-  border-radius: 3px 8px 8px 3px;
+  border-radius: 2px 6px 6px 2px;
   background: #b9b8bf;
   box-shadow:
     inset 3px 0 0 rgba(0, 0, 0, 0.15),
@@ -142,10 +296,23 @@
   cursor: default;
 }
 
+.book-cover.active {
+  box-shadow:
+    0 0 0 2px var(--accent-border),
+    var(--shadow);
+}
+
 .book-cover.selected {
   box-shadow:
     0 0 0 3px var(--accent),
     var(--shadow);
+}
+
+/* While exporting, suppress pick highlights so the saved image is clean. */
+.exporting .book-cover {
+  box-shadow:
+    inset 3px 0 0 rgba(0, 0, 0, 0.15),
+    var(--shadow) !important;
 }
 
 .book-cover img {
@@ -158,125 +325,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
+  padding: 2px;
+  text-align: center;
 }
 
 .book-cover-empty .plus {
-  font-size: 28px;
+  font-size: 22px;
   line-height: 1;
   color: var(--text-h);
-}
-
-/* Month grid */
-
-.month-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px 12px;
-  max-width: 900px;
-}
-
-.month-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.month-name {
-  font-size: 13px;
-  color: var(--text-h);
-}
-
-/* Bracket board */
-
-.bracket-board {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-.round-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.round-label {
-  font-weight: 600;
-  color: var(--text-h);
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  font-size: 13px;
-}
-
-/* A short vertical rule with an upward arrowhead: winners advance up
-   the page toward the champion, matching the reference bracket diagram. */
-.connector {
-  width: 2px;
-  height: 14px;
-  background: var(--border);
-  position: relative;
-}
-
-.connector::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-bottom: 7px solid var(--border);
-}
-
-.bracket-round {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-}
-
-.matchup {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.03);
-}
-
-.matchup.bye {
-  background: transparent;
-}
-
-.matchup .vs {
-  font-size: 11px;
-  color: var(--text);
-}
-
-.champion {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.champion .book-cover {
-  --cover-w: 140px;
-}
-
-@media (max-width: 640px) {
-  .top-bar {
-    justify-content: center;
-  }
-
-  .share-button {
-    margin-left: 0;
-  }
 }

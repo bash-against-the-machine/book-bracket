@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { MonthIndex } from '../lib/bracket'
+import { downstreamOf, type MonthIndex } from '../lib/bracket'
 
 export interface YearData {
   images: Partial<Record<MonthIndex, string>>
@@ -14,7 +14,6 @@ function emptyYearData(): YearData {
 }
 
 export function useBookBracket() {
-  const [username, setUsername] = useState('')
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null)
   const [year, setYear] = useState(CURRENT_YEAR)
   const [byYear, setByYear] = useState<Record<number, YearData>>({})
@@ -22,26 +21,26 @@ export function useBookBracket() {
   const yearData = byYear[year] ?? emptyYearData()
 
   function setMonthImage(month: MonthIndex, image: string | null) {
-    setByYear((prev) => ({
-      ...prev,
-      [year]: {
-        images: { ...(prev[year]?.images ?? {}), [month]: image ?? undefined },
-        // Changing a leaf image can invalidate any match built on top of it.
-        picks: {},
-      },
-    }))
+    setByYear((prev) => {
+      const current = prev[year] ?? emptyYearData()
+      // A new cover invalidates its pair's pick and everything built on it.
+      const pairId = `pair-${Math.floor(month / 2)}`
+      const picks = { ...current.picks }
+      delete picks[pairId]
+      for (const id of downstreamOf(pairId)) delete picks[id]
+      return {
+        ...prev,
+        [year]: { images: { ...current.images, [month]: image ?? undefined }, picks },
+      }
+    })
   }
 
   function setMatchPick(matchId: string, pick: 0 | 1) {
     setByYear((prev) => {
       const current = prev[year] ?? emptyYearData()
-      const [round] = matchId.split('-').map(Number)
-      // Keep this round's and earlier rounds' picks; clear later rounds since
-      // they may have been computed from the outcome we're about to change.
-      const picks = Object.fromEntries(
-        Object.entries(current.picks).filter(([id]) => Number(id.split('-')[0]) <= round),
-      )
-      picks[matchId] = pick
+      if (current.picks[matchId] === pick) return prev
+      const picks = { ...current.picks, [matchId]: pick }
+      for (const id of downstreamOf(matchId)) delete picks[id]
       return { ...prev, [year]: { ...current, picks } }
     })
   }
@@ -53,8 +52,6 @@ export function useBookBracket() {
   }, [])
 
   return {
-    username,
-    setUsername,
     backgroundImage,
     setBackgroundImage,
     year,
