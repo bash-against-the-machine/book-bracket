@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { toJpeg } from 'html-to-image'
 import { buildBracket, type TapAction } from './lib/bracket'
+import { exportBracketImage } from './lib/exportImage'
 import { useBookBracket } from './hooks/useBookBracket'
 import { BracketBoard } from './components/BracketBoard'
 import { readFileAsDataUrl } from './lib/files'
@@ -20,8 +20,8 @@ function App() {
   } = useBookBracket()
 
   const [saving, setSaving] = useState(false)
-  const [exporting, setExporting] = useState(false)
   const captureRef = useRef<HTMLDivElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const bgInputRef = useRef<HTMLInputElement>(null)
   const [scale, setScale] = useState(1)
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
@@ -65,25 +65,33 @@ function App() {
   }, [bracket, images])
 
   async function handleSave() {
-    const node = captureRef.current
-    if (!node) return
     setSaving(true)
-    setExporting(true)
     try {
-      // Let the "exporting" class paint so pick highlights are suppressed.
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      const dataUrl = await toJpeg(node, {
-        pixelRatio: 2,
-        quality: 0.95,
-        backgroundColor: '#ffffff',
-        filter: (n) => !(n instanceof HTMLElement && n.classList.contains('no-export')),
-      })
+      const heading = headingRef.current?.textContent?.trim() || 'My Book Bracket'
+      const blob = await exportBracketImage({ bracket, heading, year, backgroundImage })
+      const file = new File([blob], `book-bracket-${year}.jpg`, { type: 'image/jpeg' })
+
+      // On phones, hand the image to the native share sheet so the user can
+      // pick "Save Image" / save to Photos. Desktop falls back to a download.
+      const isMobile =
+        /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1
+      if (isMobile && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: heading })
+          return
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') return
+          // Share failed for another reason: fall through to a download.
+        }
+      }
+
+      const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.download = `book-bracket-${year}.jpg`
-      link.href = dataUrl
+      link.download = file.name
+      link.href = url
       link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
     } finally {
-      setExporting(false)
       setSaving(false)
     }
   }
@@ -114,13 +122,10 @@ function App() {
           }}
         >
           <div className="scale-wrapper" style={{ transform: `scale(${scale})` }}>
-            <div
-              className={`capture-area${exporting ? ' exporting' : ''}`}
-              ref={captureRef}
-              style={backgroundStyle}
-            >
+            <div className="capture-area" ref={captureRef} style={backgroundStyle}>
               <div className="heading-row">
                 <h1
+                  ref={headingRef}
                   className="bracket-heading"
                   contentEditable
                   suppressContentEditableWarning
@@ -138,7 +143,7 @@ function App() {
                 <span className="year-wrap">
                   <span className="year-text">{year}</span>
                   <select
-                    className="year-select no-export"
+                    className="year-select"
                     value={year}
                     onChange={(e) => setYear(Number(e.target.value))}
                     aria-label="Year"

@@ -28,9 +28,10 @@
 /* Capture area: everything inside ends up in the saved image except
    elements marked .no-export. */
 .capture-area {
-  --cover-w: 58px;
+  --cover-w: 64px;
   --pair-gap: 10px;
-  --lane-w: 150px;
+  --lane-w: 158px;
+  --line: #ffffff;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -150,10 +151,11 @@
 /* Connectors */
 
 .stem {
-  width: 2px;
+  width: 3px;
   height: 12px;
-  background: var(--border);
+  background: var(--line);
   position: relative;
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.4));
 }
 
 .stem.down::after {
@@ -162,9 +164,9 @@
   bottom: -1px;
   left: 50%;
   transform: translateX(-50%);
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 6px solid var(--border);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--line);
 }
 
 .stem.up::after {
@@ -173,27 +175,28 @@
   top: -1px;
   left: 50%;
   transform: translateX(-50%);
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-bottom: 6px solid var(--border);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 7px solid var(--line);
 }
 
 .pair-join {
   width: calc(var(--cover-w) + var(--pair-gap));
   height: 10px;
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.4));
 }
 
 .pair-join.down {
-  border-left: 2px solid var(--border);
-  border-right: 2px solid var(--border);
-  border-bottom: 2px solid var(--border);
+  border-left: 3px solid var(--line);
+  border-right: 3px solid var(--line);
+  border-bottom: 3px solid var(--line);
   border-radius: 0 0 5px 5px;
 }
 
 .pair-join.up {
-  border-left: 2px solid var(--border);
-  border-right: 2px solid var(--border);
-  border-top: 2px solid var(--border);
+  border-left: 3px solid var(--line);
+  border-right: 3px solid var(--line);
+  border-top: 3px solid var(--line);
   border-radius: 5px 5px 0 0;
 }
 
@@ -230,7 +233,7 @@
 }
 
 .w-col .book-cover {
-  --cover-w: 76px;
+  --cover-w: 84px;
 }
 
 .save-button {
@@ -306,13 +309,6 @@
   box-shadow:
     0 0 0 3px var(--accent),
     var(--shadow);
-}
-
-/* While exporting, suppress pick highlights so the saved image is clean. */
-.exporting .book-cover {
-  box-shadow:
-    inset 3px 0 0 rgba(0, 0, 0, 0.15),
-    var(--shadow) !important;
 }
 
 .book-cover img {

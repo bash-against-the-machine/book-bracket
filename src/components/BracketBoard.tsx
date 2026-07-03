@@ -6,9 +6,9 @@ interface BracketBoardProps {
   bracket: BracketView
   onTap: (tap: TapAction) => void
   onUpload: (month: number, image: string) => void
-  /** Rendered mid-left of the board; excluded from the saved image. */
+  /** Rendered mid-left of the board (on-screen only; exports never include it). */
   hint: ReactNode
-  /** Rendered mid-right of the board; excluded from the saved image. */
+  /** Rendered mid-right of the board (on-screen only; exports never include it). */
   actions: ReactNode
 }
 
@@ -142,13 +142,13 @@ export function BracketBoard({ bracket, onTap, onUpload, hint, actions }: Bracke
       </div>
 
       <div className="mid-row">
-        <div className="mid-side no-export">{hint}</div>
+        <div className="mid-side">{hint}</div>
         <div className="w-col">
           <span className="stem down" aria-hidden="true" />
           <Box box={bracket.champion} placeholder="W" onTap={onTap} />
           <span className="stem up" aria-hidden="true" />
         </div>
-        <div className="mid-side no-export">{actions}</div>
+        <div className="mid-side">{actions}</div>
       </div>
 
       <div className="half half-bottom">
