@@ -1,0 +1,232 @@
+#app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+/* Top bar */
+
+.top-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  background: var(--social-bg, rgba(244, 243, 236, 0.7));
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.top-bar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.top-bar-field label {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.top-bar-field input[type='text'],
+.top-bar-field select {
+  font: inherit;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.top-bar button {
+  font: inherit;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.top-bar button:hover {
+  border-color: var(--accent-border);
+}
+
+.share-button {
+  margin-left: auto;
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+  font-weight: 600;
+}
+
+.share-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Capture area */
+
+.capture-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  padding: 32px 20px 56px;
+}
+
+.bracket-title {
+  margin: 0;
+  text-align: center;
+}
+
+/* Book cover */
+
+.book-cover {
+  --cover-w: 90px;
+  width: var(--cover-w);
+  aspect-ratio: 2 / 3;
+  border: none;
+  border-radius: 3px 8px 8px 3px;
+  background: #b9b8bf;
+  box-shadow:
+    inset 3px 0 0 rgba(0, 0, 0, 0.15),
+    var(--shadow);
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.book-cover:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.book-cover:disabled {
+  cursor: default;
+}
+
+.book-cover.selected {
+  box-shadow:
+    0 0 0 3px var(--accent),
+    var(--shadow);
+}
+
+.book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-cover-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.book-cover-empty .plus {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--text-h);
+}
+
+/* Month grid */
+
+.month-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px 16px;
+  max-width: 900px;
+}
+
+.month-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.month-name {
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+/* Bracket board */
+
+.bracket-board {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+}
+
+.bracket-round {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+}
+
+.matchup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.matchup.bye {
+  background: transparent;
+}
+
+.matchup .vs {
+  font-size: 11px;
+  color: var(--text);
+}
+
+.champion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.champion .book-cover {
+  --cover-w: 140px;
+}
+
+.champion-label {
+  font-weight: 600;
+  color: var(--text-h);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .top-bar {
+    justify-content: center;
+  }
+
+  .share-button {
+    margin-left: 0;
+  }
+}
