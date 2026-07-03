@@ -6,11 +6,18 @@ interface BracketBoardProps {
   onPick: (matchId: string, pick: 0 | 1) => void
 }
 
+const ROUND_LABELS: Record<number, string> = {
+  1: 'Round 1',
+  2: 'Round 2',
+  3: 'Round 3',
+  4: 'Semifinal',
+  5: 'Final',
+}
+
 export function BracketBoard({ bracket, onPick }: BracketBoardProps) {
   // Highest round number first: the final is nearest the champion, round 1
   // (the month pairings) is nearest the month grid at the bottom of the page.
   const roundsTopDown = [...bracket.rounds].reverse()
-  const finalRound = bracket.rounds.length
 
   return (
     <div className="bracket-board">
@@ -30,18 +37,9 @@ export function BracketBoard({ bracket, onPick }: BracketBoardProps) {
         return (
           <div className="round-section" key={roundNumber}>
             <div className="connector" aria-hidden="true" />
-            <div className="round-label">{roundNumber === finalRound ? 'Final' : `Round ${roundNumber}`}</div>
+            <div className="round-label">{ROUND_LABELS[roundNumber] ?? `Round ${roundNumber}`}</div>
             <div className="bracket-round">
               {matches.map((match) => {
-                if (!match.b) {
-                  // Bye: nothing to decide, just show the slot passing through.
-                  return (
-                    <div className="matchup bye" key={match.id}>
-                      <BookCover image={match.a.image} label={match.a.label} disabled />
-                    </div>
-                  )
-                }
-
                 const canDecide =
                   !!match.a.image && !match.a.pending && !!match.b.image && !match.b.pending
 

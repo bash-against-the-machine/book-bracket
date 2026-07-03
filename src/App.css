@@ -2,7 +2,27 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+  width: 100%;
+}
+
+.scale-sizer {
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.scale-wrapper {
+  display: inline-block;
+  transform-origin: top left;
 }
 
 /* Top bar */
@@ -10,15 +30,12 @@
 .top-bar {
   display: flex;
   align-items: flex-end;
-  gap: 20px;
+  gap: 12px;
   flex-wrap: wrap;
-  padding: 16px 24px;
+  padding: 10px 16px;
   background: var(--social-bg, rgba(244, 243, 236, 0.7));
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .top-bar-field {
@@ -73,30 +90,30 @@
 /* Capture area */
 
 .capture-area {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
-  padding: 32px 20px 56px;
+  gap: 20px;
+  padding: 20px 20px 28px;
 }
 
 .bracket-title {
   margin: 0;
   text-align: center;
   line-height: 1.2;
+  font-size: 28px;
 }
 
 @media (max-width: 640px) {
   .bracket-title {
-    font-size: 26px;
+    font-size: 20px;
   }
 }
 
 /* Book cover */
 
 .book-cover {
-  --cover-w: 90px;
+  --cover-w: 72px;
   width: var(--cover-w);
   aspect-ratio: 2 / 3;
   border: none;
@@ -158,7 +175,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 20px 16px;
+  gap: 10px 12px;
   max-width: 900px;
 }
 
@@ -166,7 +183,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .month-name {
@@ -187,7 +204,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 
 .round-label {
@@ -202,7 +219,7 @@
    the page toward the champion, matching the reference bracket diagram. */
 .connector {
   width: 2px;
-  height: 24px;
+  height: 14px;
   background: var(--border);
   position: relative;
 }
@@ -222,14 +239,14 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 24px;
+  gap: 12px;
 }
 
 .matchup {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.03);
 }

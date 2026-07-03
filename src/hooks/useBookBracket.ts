@@ -36,8 +36,10 @@ export function useBookBracket() {
     setByYear((prev) => {
       const current = prev[year] ?? emptyYearData()
       const [round] = matchId.split('-').map(Number)
+      // Keep this round's and earlier rounds' picks; clear later rounds since
+      // they may have been computed from the outcome we're about to change.
       const picks = Object.fromEntries(
-        Object.entries(current.picks).filter(([id]) => Number(id.split('-')[0]) < round),
+        Object.entries(current.picks).filter(([id]) => Number(id.split('-')[0]) <= round),
       )
       picks[matchId] = pick
       return { ...prev, [year]: { ...current, picks } }
