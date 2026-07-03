@@ -66,8 +66,12 @@
   display: inline-block;
 }
 
+/* The year renders in the same face/size/weight as the heading (an h1). */
 .year-text {
-  font-size: 20px;
+  font-family: var(--heading);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
   color: var(--text-h);
   border-bottom: 1px dashed transparent;
 }
@@ -83,6 +87,15 @@
   height: 100%;
   opacity: 0;
   cursor: pointer;
+}
+
+/* Over a background photo, dark text disappears — flip it to white with a
+   soft shadow, matching the exported image. */
+.has-bg .bracket-heading,
+.has-bg .year-text,
+.has-bg .month-name {
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* Board structure */

@@ -122,7 +122,11 @@ function App() {
           }}
         >
           <div className="scale-wrapper" style={{ transform: `scale(${scale})` }}>
-            <div className="capture-area" ref={captureRef} style={backgroundStyle}>
+            <div
+              className={`capture-area${backgroundImage ? ' has-bg' : ''}`}
+              ref={captureRef}
+              style={backgroundStyle}
+            >
               <div className="heading-row">
                 <h1
                   ref={headingRef}

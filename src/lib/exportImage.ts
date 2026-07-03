@@ -196,22 +196,33 @@ export async function exportBracketImage(input: ExportInput): Promise<Blob> {
     drawCoverFit(ctx, await loadImage(backgroundImage), 0, 0, W, H)
   }
 
-  // Heading + year, centered together
-  ctx.fillStyle = TEXT
-  ctx.textAlign = 'left'
+  // Over a background photo, dark text disappears — use white with a soft
+  // shadow instead. On the plain white default, keep dark text.
+  const textColor = backgroundImage ? '#ffffff' : TEXT
+  const withTextShadow = (draw: () => void) => {
+    ctx.save()
+    if (backgroundImage) {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+      ctx.shadowBlur = 6
+      ctx.shadowOffsetY = 1
+    }
+    draw()
+    ctx.restore()
+  }
+
+  // Heading + year, centered together, same font for both
   ctx.font = '600 46px system-ui, sans-serif'
+  ctx.textAlign = 'left'
   const headingWidth = ctx.measureText(heading).width
-  const yearFont = '400 36px system-ui, sans-serif'
-  ctx.save()
-  ctx.font = yearFont
   const yearWidth = ctx.measureText(String(year)).width
-  ctx.restore()
   const gap = 48
   const startX = (W - (headingWidth + gap + yearWidth)) / 2
   const headingBaseline = PAD + 52
-  ctx.fillText(heading, startX, headingBaseline)
-  ctx.font = yearFont
-  ctx.fillText(String(year), startX + headingWidth + gap, headingBaseline)
+  withTextShadow(() => {
+    ctx.fillStyle = textColor
+    ctx.fillText(heading, startX, headingBaseline)
+    ctx.fillText(String(year), startX + headingWidth + gap, headingBaseline)
+  })
 
   // Connector lines (drawn before boxes so arrowheads tuck under box edges)
   ctx.save()
@@ -258,15 +269,17 @@ export async function exportBracketImage(input: ExportInput): Promise<Blob> {
   ctx.restore()
 
   // Month labels
-  ctx.fillStyle = TEXT
-  ctx.textAlign = 'center'
-  ctx.font = '600 22px system-ui, sans-serif'
-  for (let i = 0; i < 6; i++) {
-    ctx.fillText(bracket.months[i].slot.label, monthX(i) + COVER_W / 2, yTopLabel + 24)
-  }
-  for (let i = 6; i < 12; i++) {
-    ctx.fillText(bracket.months[i].slot.label, monthX(i) + COVER_W / 2, yBotLabel + 24)
-  }
+  withTextShadow(() => {
+    ctx.fillStyle = textColor
+    ctx.textAlign = 'center'
+    ctx.font = '600 22px system-ui, sans-serif'
+    for (let i = 0; i < 6; i++) {
+      ctx.fillText(bracket.months[i].slot.label, monthX(i) + COVER_W / 2, yTopLabel + 24)
+    }
+    for (let i = 6; i < 12; i++) {
+      ctx.fillText(bracket.months[i].slot.label, monthX(i) + COVER_W / 2, yBotLabel + 24)
+    }
+  })
 
   // Boxes
   const box = (
